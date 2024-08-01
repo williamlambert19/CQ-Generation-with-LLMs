@@ -6,6 +6,7 @@ This project uses small LLMs that are able to be run locally to see if they are 
 Download all of the files including the requirements. In the same folder that you have downloaded and put these downloaded files create a .env file. This .env file should include a key with your HUGGINGFACEHUB_API_TOKEN and your LLAMA_API_TOKEN. Then run the actual_generation_of_cqs.py 
 
 ```
+pip install -r requirements.txt
 python actual_generation_of_cqs.py
 ```
 
