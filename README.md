@@ -4,7 +4,9 @@ This project uses small LLMs that are able to be run locally to see if they are 
 
 # How to run
 Download all of the files including the requirements. In the same folder that you have downloaded and put these downloaded files create a .env file. This .env file should include a key with your HUGGINGFACEHUB_API_TOKEN and your LLAMA_API_TOKEN. Then run the actual_generation_of_cqs.py 
+\n
 ```python actual_generation_of_cqs.py ```
+\n
 This will produce the CQs using the prompt templates which I used. This will then create two new folders in that directory called all_results and all_metric_summaries which will contain the generated summaries and their metric results respectively.
 
 # Prompting Techniques
