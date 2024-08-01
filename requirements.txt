@@ -1,0 +1,10 @@
+spacy==3.7.4
+rdflib==7.0.0
+nltk
+textstat==0.7.3
+transformers==4.42.4
+tensorflow==2.17.0
+bert-score==0.3.13
+rouge-score==0.1.2
+sacrebleu==2.4.2
+torch==2.3.1
