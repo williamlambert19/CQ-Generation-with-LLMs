@@ -11,6 +11,8 @@ python actual_generation_of_cqs.py
 ```
 
 This will produce the CQs using the prompt templates which I used. This will then create two new folders in that directory called all_results and all_metric_summaries which will contain the generated summaries and their metric results respectively.
+# General Methodology
+![Alt text](C:\Users\willi\OneDrive\Documents\Final MSc project diagram.png)
 
 # Prompting Techniques
 This project uses a range of prompting techniques with differing levels of complexity. The most basic prompting technique is zero-shot learning which just prompts the LLM to produce CQs. I also use multiple variations of few -shot learning to produce output. I also use the filling of chunked competency questions from the polifonia dataset woth triples from Linked Open Vocabularies (LOV). For the most part we test the LLMs output against the RevOnt Human Annotated CQs on sport. 
