@@ -166,7 +166,7 @@ def few_shot_good_and_bad_examples_cqs(model,tokenizer,num_return_sequences,num_
     return candidates + '?'
 
 # Loads chunked CQs from Polifonia dataset to be used in the prompt
-from chunk import get_pcq_ec_chunks
+from chunks import get_pcq_ec_chunks
 pcq_eq = get_pcq_ec_chunks()
 
 # Produces an even split of samples covering the whole dataset. This is done so that it is not just the first
@@ -433,7 +433,7 @@ def few_shot_good_and_bad_examples_cqs_context(model,tokenizer,num_return_sequen
 
 
 
-
+# This function works in exactly the same except with context now
 def gen_cqs_with_LOV_filled_few_shots1_context(model,tokenizer,num_return_sequences,filled_examples,num_examples,context):
     
     examples = "\n"
@@ -467,3 +467,40 @@ def gen_cqs_with_LOV_filled_few_shots1_context(model,tokenizer,num_return_sequen
     candidates = after_hashtag(candidates, "?")
     return candidates + '?'
 
+#Functions to format the Llama 3 output
+def extract_cq_from_llama(cq):
+    if ':**' in cq:
+        cq = cq.split(':**')[1]
+        return cq.split('\n')[0]
+    else:
+        return cq.split('\n\n')[1]
+
+def remove_quotations(cq):
+    return cq.replace('"','')
+# Here we generate CQs using LLama. We use getenv to obtain the Llama API token
+from llamaapi import LlamaAPI
+import json
+token = os.getenv("LLAMA_API_TOKEN")
+llama = LlamaAPI(token)
+def zero_shot_llama(context):
+    api_request_json = {
+        "model": "llama3-70b",
+        "messages": [
+        {"role": "system", "content": "Take on the role of an expert in ontology engineering. Your role is to create competency questions in a given domain. Competency Questions are a set of questions which need to be replied correctly by the ontology. Good competency quesitons should be concise, abstract, relavant to the domain and directly answerable by an ontology. The answers to these questions should not be debatable."},
+        {"role": "user", "content": f" Generate a good new competency question about {context}. Generated competency questions should be to do with {context}!"},
+        ],
+        'temperature':0.8,
+        'max_tokens': 50,
+        'do_sample':True,
+        'top_p':0.95,
+        'top_k':50
+    }
+
+  # Run llama
+    response = llama.run(api_request_json)
+    print(response.json())
+    x = response.json()
+    cq = x['choices'][0]['message']['content']
+    cq = extract_cq_from_llama(cq)
+    cq = remove_quotations(cq)
+    return cq
