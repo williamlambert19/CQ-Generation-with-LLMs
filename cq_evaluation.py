@@ -28,31 +28,52 @@ def get_BERT_score( candidates,references):
     P, R, F1 = scorer.score( candidates, references, verbose=True)
     print(f"BERTScore Precision: {P.mean():.4f}, Recall: {R.mean():.4f}, F1: {F1.mean():.4f}")
     return (P.mean(), R.mean(), F1.mean())
-
-def get_ROUGE_score(references,candidates):
+# Function to get all the ROUGE scores for a given candidate and reference. 
+# This function is used to calculate the average, standard deviation, and quartiles of the ROUGE scores.
+def calculate_rouge_scores(candidates, references):
     scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
-    # Aggregator aggregates final scores for all candidates CQs meaning that average results are output.
-    aggregator = scoring.BootstrapAggregator()
+    all_scores = []
+    rouge_precision = []
+    rouge_recall = []
+    rouge_fmeasure = []
+    best_rouge = 0 
+    worst_rouge = 1
     for candidate, reference in zip(candidates, references):
         scores = scorer.score(reference, candidate)
-        aggregator.add_scores(scores)
+    
+        rouge_precision.append(scores['rouge1'].precision)
+        rouge_recall.append(scores['rouge1'].recall)
+        rouge_fmeasure.append(scores['rouge1'].fmeasure)
+        # Here we aim to extract the best and worst CQs based on the ROUGE score.
+        if scores['rouge1'].fmeasure > best_rouge:
+            best_rouge = scores['rouge1'].fmeasure
+            best_cq = (candidate,reference)
+        if scores['rouge1'].fmeasure < worst_rouge:
+            worst_rouge = scores['rouge1'].fmeasure
+            worst_cq = candidate,reference
+        avg_rouge_precision = np.mean(rouge_precision)
+        avg_rouge_recall = np.mean(rouge_recall)
+        avg_rouge_fmeasure = np.mean(rouge_fmeasure)
+        print(avg_rouge_fmeasure)
+        if avg_rouge_fmeasure is np.nan:
+            print('NAN')
+        rouge_quartiles = np.percentile(rouge_fmeasure, [25, 50, 75])
+        rouge_std = np.std(rouge_fmeasure)
+    return avg_rouge_fmeasure,rouge_std,best_rouge,best_cq,worst_rouge,worst_cq,rouge_quartiles
 
-    # Get the aggregated scores
-    result = aggregator.aggregate()
-
-    # Print the results
-    for key in result:
-        print(f"{key}:")
-        print(f"  Precision: {result[key].mid.precision:.4f}")
-        print(f"  Recall:    {result[key].mid.recall:.4f}")
-        print(f"  F1:        {result[key].mid.fmeasure:.4f}")
-
-    return (round(result[key].mid.precision,4) ,round(result[key].mid.recall,4) ,round(result[key].mid.fmeasure,4) )
 
 
 # This function combines all individual metrics functions already defined into one function that fits to the output DataFrame requirements.
 def get_metrics(candidates, references, cq_type):
-    rouge_score = get_ROUGE_score(references, candidates)
+    rouge_score = calculate_rouge_scores(references, candidates)
+    avg_rouge_fmeasure = rouge_score[0]
+    rouge_std = rouge_score[1]
+    best_rouge = rouge_score[2]
+    best_cq_rouge = rouge_score[3]
+    worst_rouge = rouge_score[4]
+    worst_cq_rouge = rouge_score[5]
+    rouge_quartiles = rouge_score[6]
+
     meteor_score_1 = []
     chrf_score_1 = []
     best_bert = 0
@@ -119,4 +140,4 @@ def get_metrics(candidates, references, cq_type):
     avg_meteor = sum(meteor_score_1) / len(candidates)
     avg_chrf_score = sum(chrf_score_1) / len(candidates)
     print(cq_type)
-    return cq_type,(avg_bert_precision, avg_bert_recall, avg_bert_f1),(bert_all_precision_std,bert_all_recall_std,bert_all_f1_std), max_bert, cq_max_bert,min_bert,cq_worst_bert,((bert_q1_precision,bert_q1_recall,bert_q1_f1),(bert_q2_precision,bert_q2_recall,bert_q2_f1),(bert_q3_precision,bert_q3_recall,bert_q3_f1)), rouge_score, avg_meteor,max_meteor,min_meteor,std_meteor, cq_max_meteor,cq_min_meteor,(meteor_q1,meteor_q2,meteor_q3) ,avg_chrf_score,max_chrf,min_chrF,std_chrf,cq_max_chrf,cq_min_chrf,(chrF_q1,chrF_q2,chrF_q3)
+    return cq_type,(avg_bert_precision, avg_bert_recall, avg_bert_f1),(bert_all_precision_std,bert_all_recall_std,bert_all_f1_std), max_bert, cq_max_bert,min_bert,cq_worst_bert,((bert_q1_precision,bert_q1_recall,bert_q1_f1),(bert_q2_precision,bert_q2_recall,bert_q2_f1),(bert_q3_precision,bert_q3_recall,bert_q3_f1)), avg_meteor,max_meteor,min_meteor,std_meteor, cq_max_meteor,cq_min_meteor,(meteor_q1,meteor_q2,meteor_q3) ,avg_chrf_score,max_chrf,min_chrF,std_chrf,cq_max_chrf,cq_min_chrf,(chrF_q1,chrF_q2,chrF_q3),avg_rouge_fmeasure,rouge_std,best_rouge,best_cq_rouge,worst_rouge,worst_cq_rouge,rouge_quartiles
