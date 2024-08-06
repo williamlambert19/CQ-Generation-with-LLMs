@@ -23,11 +23,12 @@ model_name = "google/flan-t5-base"
 tokenizer = T5Tokenizer.from_pretrained(model_name)
 model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
 models['flan-base'] = (model, tokenizer)
-
+print(1)
 model_name = "google/flan-t5-large"
 tokenizer = T5Tokenizer.from_pretrained(model_name)
 model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
 models['flan-large'] = (model, tokenizer)
+print(2)
 
 model = GPTNeoXForCausalLM.from_pretrained(
   "EleutherAI/pythia-410m-deduped",
@@ -41,7 +42,7 @@ tokenizer = AutoTokenizer.from_pretrained(
   cache_dir="./pythia-410m-deduped/step3000",
 )
 models['pythia-410m-deduped'] = (model, tokenizer)
-
+print(3)
 # Extract the CQs from the ROH CQ dataset.
 roh_sports = pd.read_csv(f'Sports team (Risposte).csv')
 roh_sports = roh_sports.loc[1].reset_index(drop=True)
@@ -179,8 +180,14 @@ results  = {}
 # Gets the CQs to be generated with different numbers of templates.
 num_examples = [1,5,10,15,20,25]
 results[f'ROH'] = get_roh_results(roh_sports_cqs)
+# Generating baseline CQs
 results_LOV = get_roh_results(generate_LOV.generate_cqs_LOV('sport_2016-01-01.n3',5,5))
-results_LOV = pd.DataFrame(columns=['cq','Length', 'Verb_Count', 'Adjective_Count', 'Adverb_Count', 'Pronoun_Count', 'Noun_Count', 'Preposition_Count', 'Conjunction_Count', 'Unique_words', 'Stopwords','Flesch-Kincaid Grade','Coleman Liau Index'])
+results[f'LOV'] = results_LOV
+#Generate CQs using zero shot Llama
+results_Llama = results_LOV = pd.DataFrame(columns=['cq','Length', 'Verb_Count', 'Adjective_Count', 'Adverb_Count', 'Pronoun_Count', 'Noun_Count', 'Preposition_Count', 'Conjunction_Count', 'Unique_words', 'Stopwords','Flesch-Kincaid Grade','Coleman Liau Index'])
+for i in range(10):
+    results_Llama.loc[len(results_Llama)] = get_syntax_results(cq_generation.zero_shot_llama('sport'))
+results['Zero Shot Llama'] = results_Llama
 for key in models.keys():
     print(key)
     results_zero_shot = pd.DataFrame(columns=['cq','Length', 'Verb_Count', 'Adjective_Count', 'Adverb_Count', 'Pronoun_Count', 'Noun_Count', 'Preposition_Count', 'Conjunction_Count', 'Unique_words', 'Stopwords','Flesch-Kincaid Grade','Coleman Liau Index'])
@@ -238,7 +245,13 @@ for key in results.keys():
 # summaries one at a time.
 os.makedirs('all_metric_summaries', exist_ok=True)
 for key in results.keys():
-    metric_summaries = pd.DataFrame(columns=['Type','Avg BertScore','Std Bert','Max Bert', 'CQ Max Bert','Min Bert','CQ Min Bert','Bert Quartiles','Avg Rouge', 'Avg Meteor','Max Meteor','Min Meteor','Std Meteor','CQ Max Meteor','CQ Min Meteor','Meteor Quartiles','Avg chrF','Max chrF','Min chrF','Std chrF','CQ Max chrF','CQ Min chrF','chrF Quartiles'])
+    metric_summaries = pd.DataFrame(columns=['Type', 'Avg BertScore', 'Std Bert', 'Max Bert', 'CQ Max Bert',
+       'Min Bert', 'CQ Min Bert', 'Bert Quartiles', 'Avg Meteor', 'Max Meteor',
+       'Min Meteor', 'Std Meteor', 'CQ Max Meteor', 'CQ Min Meteor',
+       'Meteor Quartiles', 'Avg chrF', 'Max chrF', 'Min chrF', 'Std chrF',
+       'CQ Max chrF', 'CQ Min chrF', 'chrF Quartiles', 'Avg Rouge F1',
+       'Rouge std F1', 'Max Rouge F1', 'CQ Max Rouge F1', 'Min Rouge F1',
+       'Worst CQ F1', 'Rouge Quartiles F1'])    
     x = cq_evaluation.get_metrics(results[key]['cq'].tolist, roh_sports_cqs, key)
     metric_summaries.loc[len(metric_summaries)] = x
     metric_summaries.to_csv(f'all_metric_summaries/{key}.csv')
