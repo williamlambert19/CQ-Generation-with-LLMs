@@ -1,6 +1,11 @@
-#This script is used to abstract competency questions and extract entity chunks from them. The entity chunks are then used to generate the entity classes. The script uses the spaCy library to perform part-of-speech tagging and dependency parsing. The script also uses the pandas library to read the competency questions from a CSV file and to store the extracted entity chunks in a new CSV file. The script defines several functions to preprocess the competency questions, extract entity chunks, and generate the entity classes. The script defines the following functions:
-# The results of this chunking are then used to be filled by LOV vcabularies or as part of few
-# shot prompting.
+#This script is used to abstract competency questions and extract entity chunks from them.
+#  The entity chunks are then used to generate the entity classes. The script uses the 
+# spaCy library to perform part-of-speech tagging and dependency parsing. The script also
+#  uses the pandas library to read the competency questions from a CSV file and to store 
+# the extracted entity chunks in a new CSV file. The script defines several functions to
+#  preprocess the competency questions, extract entity chunks, and generate the entity 
+# classes. The script defines the following functions: The results of this chunking are 
+# then used to be filled by LOV vcabularies or as part of few-shot prompting.
 
 import pandas as pd
 import nltk
@@ -35,7 +40,8 @@ def remove_non_character(s):
 def tokenize(s):
     return nltk.word_tokenize(s)
 
-# Here we obtain the part of the setence which each word belongs to i.e whether it is a noun, verb, etc.
+# Here we obtain the part of the setence which each word belongs to i.e whether it is a 
+# noun, verb, etc.
 def POS_tagging(s):
     doc = nlp(s)
     sentence = []
@@ -43,7 +49,8 @@ def POS_tagging(s):
         sentence.append((token.text, token.pos_))
     return sentence
 
-# Here we obtain the dependency tags of the sentence. i.e the relationship between the words.
+# Here we obtain the dependency tags of the sentence. i.e the relationship between the
+#  words.
 def dependency_tags(s):
     doc = nlp(s)
     sentence = []
@@ -59,9 +66,11 @@ def mark_chunk(cq, start_end_positions, type_id, counter):
 
 # Function to remove unwanted parts of the sentence before chunking.
 def normalise_noun_chunk(noun_chunk_tokens):
-    if noun_chunk_tokens[0].lower() in ['what', 'which', 'who', 'whom', 'where', 'when','how']:
+    if noun_chunk_tokens[0].lower() in ['what', 'which', 'who', 'whom', 'where', 'when',
+                                        'how']:
         noun_chunk_tokens = noun_chunk_tokens[1:]
-    elif noun_chunk_tokens[0].lower() in ['any', 'some', 'many', 'well','its', 'much', 'few']:
+    elif noun_chunk_tokens[0].lower() in ['any', 'some', 'many', 'well','its', 'much', 
+                                          'few']:
         noun_chunk_tokens = noun_chunk_tokens[1:]
     return noun_chunk_tokens
 
@@ -84,15 +93,15 @@ def calculate_token_positions(text):
     for token in doc:
         start_pos = text.find(token.text, current_pos)
         if start_pos == -1:
-            raise ValueError(f"Token '{token.text}' not found in text starting from position {current_pos}.")
+            raise ValueError(f" Token '{token.text}' not found in text starting from position {current_pos}.")
         end_pos = start_pos + len(token.text)
         positions.append((start_pos, end_pos))
         current_pos = end_pos
 
     return positions
 
-# This function is used to remove x and y from the text. x and ys are used as placeholder in
-# PCQ ontology however, this skews results of chunking
+# This function is used to remove x and y from the text. x and ys are used as placeholder
+#  in PCQ ontology however, this skews results of chunking
 def remove_x_y(text):
     text = tokenize(text)
     if 'x' in text:
@@ -101,66 +110,7 @@ def remove_x_y(text):
         text.remove('y')
     return text
 
-# The function which extracts the entity chunks from the competency questions. It follows the 
-# rules from Wisniewski et et al.
-"""def extract_ec_chunks(cq):
-    print(cq)
-    tokens = tokenize(cq)
-    doc = nlp(cq)
-    counter = 1 
-    pos = POS_tagging(cq)
-    
-    dependencies = dependency_tags(cq)
-    disallowed_phrases = {
-        "type", "types", "kind", "kinds", "category", "categories",
-        "difference", "differences", "extent", "i", "we", "there",
-        "respect", "the main types", "the possible types",
-        "the types", "the difference", "the differences",
-        "the main categories"
-    }
-    if tokens[0] == 'how' and pos[1][1] == 'ADJ' and pos[2][1] == 'VERB':
-        positions = calculate_token_positions(cq)
-        cq = mark_chunk(cq, positions[1], 'EC', counter)
-        counter += 1
-    nouns = get_noun_chunks(cq)
-    j = 1000
-    i = 0
-    tokens = tokenize(cq)
-    dependencies = dependency_tags(cq)
-    a = 0
-    while i < len(nouns):
-        chunk_token = normalise_noun_chunk(nouns[i])
-        chunk_pos = tokens.index(chunk_token)
-        positions = calculate_token_positions(cq)
 
-        if chunk_token not in disallowed_phrases:
-            if dependencies[chunk_pos][1] == 'compound' and i < len(nouns)-1:
-                
-                if dependencies[chunk_pos][2] == nouns[i+1]:
-                    cq = mark_chunk(cq, (positions[chunk_pos-a][0], positions[chunk_pos+1-a][1]), 'EC', counter)
-                    counter += 1
-                    i += 2
-                    a += 1
-
-            else:
-
-                cq = mark_chunk(cq, positions[chunk_pos-a], 'EC', counter)
-                counter += 1
-                i += 1
-        else:
-            i += 1     
-    tokens_num = len(tokenize(cq))
-    if tokens[tokens_num - 1] == '?' and pos[tokens_num - 2][1] == 'VERB' and tokens[tokens_num - 3] in ['are','is','were','was','will']:
-        positions = calculate_token_positions(cq)
-        cq = mark_chunk(cq, (positions[tokens_num - 2][0], positions[tokens_num - 1][1]), 'EC', counter)
-        counter += 1
-    if tokens[tokens_num-1] == '?' and pos[tokens_num -2][1] in ['ADJ', 'ADV']:
-        positions = calculate_token_positions(cq)
-        cq = mark_chunk(cq, positions[tokens_num - 2], 'EC', counter)
-        counter += 1
-    
-    return cq
-"""
 # This function is used to replace x and y with EC in the text.
 def change_x_y(text):
     text = tokenize(text)
@@ -188,6 +138,9 @@ def remove_words(text):
     text = ' '.join(text)
     return text
 
+# The function which extracts the entity chunks from the competency questions. It follows 
+# the rules from Wisniewski et et al.
+
 def extract_ec_chunks(cq):
     cq = change_x_y(cq)
     tokens = tokenize(cq)
@@ -207,6 +160,7 @@ def extract_ec_chunks(cq):
         cq = mark_chunk(cq, positions[1], 'EC', counter)
 #        counter += 1
     nouns = get_noun_chunks(cq)
+    # This number allows the function to skip the next noun if it is part of a compound
     j = 1000
     for i in range(len(nouns)):
         if i != j+1:
@@ -216,29 +170,27 @@ def extract_ec_chunks(cq):
             chunk_pos = tokens.index(chunk_token)
             if chunk_token not in disallowed_phrases:
                 positions = calculate_token_positions(cq)
-
                 try:
+                    # Here we ensure that two words with compound relationships are trated as one
                     if dependencies[chunk_pos][1] == 'compound' and dependencies[chunk_pos][2] == nouns[i+1]:
                         cq = mark_chunk(cq, (positions[chunk_pos][0], positions[chunk_pos+1][1]), 'EC', counter)
-#                        counter += 1
+                        #Causes the function to skip the next noun
                         j = i
-
                     elif i != j+1:
                         cq = mark_chunk(cq, positions[chunk_pos], 'EC', counter)
-#                        counter += 1
                 except:
                     pass
                     
-                    
+    # Here we mark the relavant positions in the sentence for the ECs.              
     tokens_num = len(tokenize(cq))
     if tokens[tokens_num - 1] == '?' and pos[tokens_num - 2][1] == 'VERB' and tokens[tokens_num - 3] in ['are','is','were','was','will']:
         positions = calculate_token_positions(cq)
         cq = mark_chunk(cq, (positions[tokens_num - 2][0], positions[tokens_num - 1][1]), 'EC', counter)
-#        counter += 1
+
     if tokens[tokens_num-1] == '?' and pos[tokens_num -2][1] in ['ADJ', 'ADV']:
         positions = calculate_token_positions(cq)
         cq = mark_chunk(cq, positions[tokens_num - 2], 'EC', counter)
-#        counter += 1
+
     return cq
 
 # Turns chunked ECs back into a sting
